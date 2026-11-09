@@ -249,6 +249,12 @@ details.lesson[open] > summary::after { transform: translateY(-30%) rotate(225de
 .pray-tick[aria-pressed=true] .ring { background: var(--water); border-color: var(--water); }
 .pray-tick[aria-pressed=true] .ring svg { opacity: 1; }
 .pray-tick[aria-pressed=true] { color: var(--water); }
+/* While a prayer is timed, its gold top edge fills with water from left to right. */
+.prayer.timing { border-top-color: transparent; background: linear-gradient(to right, var(--water) var(--p), var(--line) var(--p)) border-box top / 100% 3px no-repeat, var(--surface); }
+.pray-timer { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; border: 1.5px solid var(--line); background: none; border-radius: 99px; padding: 5px 12px 5px 9px; font: 600 15px var(--f-ui); color: var(--water); font-variant-numeric: tabular-nums; cursor: pointer; }
+.pray-timer svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.pray-timer[aria-pressed=true] { background: var(--water); border-color: var(--water); color: var(--water-ink); }
+.prayer-foot .lesson-actions { flex: none; }
 .prayer-form { margin: 8px 0 12px; }
 #addPrayer { margin: 4px 0 0; }
 .verse-card { border-left: 3px solid var(--lamp); padding: 4px 0 4px 14px; margin: 18px 0; }

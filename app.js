@@ -20,6 +20,7 @@ const ICON = {
   gear: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>',
   close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
   tick: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+  clock: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 10v3.5l2.5 2M9.5 3h5"/></svg>',
 };
 
 /* ---------------- State ---------------- */
@@ -125,6 +126,7 @@ function prayerHtml(p, ticked) {
     ${showVerses ? p.verses.map((x) => `<p class="prayer-verse">${esc(x.text)}${p.verses.length > 1 ? ` <span class="ref">${esc(x.ref)}</span>` : ''}</p>`).join('') : ''}
     <p class="prayer-text">${esc(p.text)}</p>
     <div class="prayer-foot"><button class="pray-tick" aria-pressed="${ticked}"><span class="ring">${ICON.tick}</span>${ticked ? 'Prayed' : 'Tick when prayed'}</button>
+      <button class="pray-timer" aria-pressed="false" aria-label="Pray for 10 minutes">${ICON.clock}<span>10 min</span></button>
       <span class="lesson-actions"><button data-act="edit">Edit</button>${p.edited ? '<button data-act="restore">Restore</button>' : ''}${p.mine ? '<button data-act="delete" class="danger">Delete</button>' : ''}</span></div>
   </article>`;
 }
@@ -134,8 +136,62 @@ function prayerForm(p) {
     <label class="field"><span>Prayer</span><textarea class="f-text" placeholder="Father in the name of Jesus…">${esc(p?.text || '')}</textarea></label>
     <div class="btn-row"><button class="btn primary f-save">Save prayer</button><button class="btn f-cancel">Cancel</button></div></div>`;
 }
+/* Prayer timer: one at a time, kept as an end time so it stays right if the phone sleeps. */
+const PRAY_MS = 10 * 60e3;
+let audioCtx, wake;
+function chime() {
+  try {
+    const t = audioCtx.currentTime;
+    [523.25, 783.99, 1046.5].forEach((f, i) => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain(), at = t + i * .45;
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(.22, at + .02); g.gain.exponentialRampToValueAtTime(.001, at + 2.4);
+      o.connect(g).connect(audioCtx.destination); o.start(at); o.stop(at + 2.5);
+    });
+  } catch {}
+}
+async function keepAwake(on) {
+  try { if (on) wake = await navigator.wakeLock?.request('screen'); else { await wake?.release(); wake = null; } } catch {}
+}
+const fmtLeft = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${pad(s % 60)}`; };
+function paintPrayers() {
+  const t = S.prayTimer, done = new Set(todayTicks().prayers || []);
+  $$('.prayer').forEach((card) => {
+    const id = card.dataset.id, on = t?.id === id, left = on ? t.end - Date.now() : PRAY_MS;
+    card.classList.toggle('timing', on);
+    card.style.setProperty('--p', `${on ? (1 - left / PRAY_MS) * 100 : 0}%`);
+    const b = $('.pray-timer', card);
+    b.setAttribute('aria-pressed', on);
+    b.setAttribute('aria-label', on ? `Stop the timer, ${fmtLeft(left)} left` : 'Pray for 10 minutes');
+    $('span', b).textContent = on ? fmtLeft(left) : '10 min';
+    const tk = $('.pray-tick', card), ticked = done.has(id);
+    tk.setAttribute('aria-pressed', ticked); tk.lastChild.textContent = ticked ? 'Prayed' : 'Tick when prayed';
+  });
+}
+function checkPrayTimer() {
+  const t = S.prayTimer; if (!t) return;
+  if (Date.now() < t.end) { paintPrayers(); return; }
+  const done = todayTicks(); done.prayers = [...new Set([...(done.prayers || []), t.id])];
+  S.prayTimer = null; save(); keepAwake(false);
+  if (!document.hidden) chime();
+  if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+  toast('10 minutes of prayer done. Amen.');
+  paintPrayers();
+}
+setInterval(checkPrayTimer, 1000);
 function bindPrayers(root) {
   const done = todayTicks();
+  $$('.pray-timer', root).forEach((b) => b.onclick = () => {
+    const id = b.closest('.prayer').dataset.id;
+    if (S.prayTimer?.id === id) { S.prayTimer = null; keepAwake(false); }
+    else {
+      S.prayTimer = { id, end: Date.now() + PRAY_MS }; keepAwake(true);
+      // Start the sound system on this tap, so the chime is allowed to play later.
+      try { audioCtx ||= new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch {}
+    }
+    save(); paintPrayers();
+  });
+  paintPrayers();
   $$('.prayer', root).forEach((card) => {
     const id = card.dataset.id, p = prayersAll().find((x) => x.id === id);
     $('.pray-tick', card).onclick = (e) => {
@@ -243,6 +299,7 @@ function renderGate(mode) {
 let hiddenAt = 0;
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { hiddenAt = Date.now(); save(); return; }
+  if (S.prayTimer) { checkPrayTimer(); if (S.prayTimer) keepAwake(true); }
   if (S.lockOnOpen && C && hiddenAt && Date.now() - hiddenAt > 2 * 60e3) { unlocked = false; renderGate('lock'); }
   else if ($('#sky')) paintSky($('#sky'));
 });
