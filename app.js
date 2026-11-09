@@ -352,7 +352,7 @@ function viewToday(v) {
       <a class="icon-btn sky-gear" href="#/settings" aria-label="Settings">${ICON.gear}</a>
     </header>
     <div class="page">
-      ${update ? `<div class="banner"><p>Your lessons have been updated.</p><button class="btn lamp" id="getUpdate">Unlock</button></div>` : ''}
+      ${updateBanner('Your lessons have been updated.')}
       <section class="card word"><p class="eyebrow">Today’s word</p>
         <p class="word-text">${esc(st.text)}</p>${st.ref ? `<p class="ref">${esc(st.ref)}</p>` : ''}</section>
       <section class="card"><p class="eyebrow">Pray today</p>
@@ -374,10 +374,15 @@ function viewToday(v) {
     </div>`;
   paintSky($('#sky'));
   timers.push(setInterval(() => $('#sky') && paintSky($('#sky')), 60e3));
-  if (update) $('#getUpdate').onclick = () => renderGate('update');
+  bindUpdate(v);
 }
 
 /* ---------------- Pray ---------------- */
+const updateReady = () => ENC && S.encVersion && ENC.version !== S.encVersion;
+function updateBanner(text) {
+  return updateReady() ? `<div class="banner"><p>${text}</p><button class="btn lamp get-update">Unlock</button></div>` : '';
+}
+function bindUpdate(v) { $$('.get-update', v).forEach((b) => b.onclick = () => renderGate('update')); }
 function praySeg(tab) {
   return `<div class="seg" role="group" aria-label="View"><a href="#/pray" role="button" aria-pressed="${tab === 'passages'}">Passages</a><a href="#/pray/prayers" role="button" aria-pressed="${tab === 'prayers'}">Prayers</a></div>`;
 }
@@ -388,6 +393,7 @@ function viewPrayers(v) {
   const prayedToday = (S.prayerLog.prayers || []).includes(today);
   v.innerHTML = pageTop('Pray', { lede: 'Pray each one aloud. Tick it as you pray.' }) + `<div class="page">
     ${praySeg('prayers')}
+    ${updateBanner('New prayers are ready. Unlock the update to see them.')}
     ${all.map((p) => prayerHtml(p, ticked.has(p.id))).join('')}
     <button class="btn block" id="addPrayer">Add a prayer</button><div id="addForm"></div>
     <h2 class="section-h">What I prayed or sensed</h2>
@@ -395,7 +401,7 @@ function viewPrayers(v) {
     <button class="btn lamp block" id="prayed" style="margin-top:14px">${prayedToday ? 'Save another prayer' : 'I’ve prayed these today'}</button>
     ${prayedToday ? '<p class="small muted" style="text-align:center">You’ve already prayed these today.</p>' : ''}
   </div>`;
-  bindPrayers(v);
+  bindPrayers(v); bindUpdate(v);
   $('#addPrayer').onclick = () => {
     $('#addPrayer').hidden = true; $('#addForm').innerHTML = prayerForm(null);
     bindPrayerForm($('#addForm'), null); $('#addForm .f-ref').focus();
@@ -416,13 +422,15 @@ function viewPrayers(v) {
 }
 function viewPray(v) {
   v.innerHTML = pageTop('Pray', { lede: 'Pray through each passage. Tick each prompt as you pray it.' }) + `<div class="page list">
-    ${(C.prayers || S.userPrayers.length) ? praySeg('passages') : ''}
+    ${updateBanner('New prayers are ready. Unlock the update to see them.')}
+    ${praySeg('passages')}
     ${C.scriptures.map((s) => {
       const log = S.prayerLog[s.id] || [];
       const meta = log.length ? `Prayed ${log.length} ${log.length === 1 ? 'time' : 'times'} · last on ${fmtDate(log[log.length - 1] + 'T12:00')}` : 'Not prayed yet';
       return `<a class="row-link" href="#/pray/${s.id}"><div class="card"><div class="grow">
         <h2 class="h3" style="margin:0">${esc(s.ref)}</h2><div class="muted">${esc(s.theme)}</div><div class="meta">${meta}</div></div>${ICON.chev}</div></a>`;
     }).join('')}</div>`;
+  bindUpdate(v);
 }
 
 function viewScripture(v, id) {

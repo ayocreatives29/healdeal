@@ -1,5 +1,5 @@
 // Keeps HealDeal working offline. Bump VERSION whenever app files change.
-const VERSION = 'healdeal-3';
+const VERSION = 'healdeal-4';
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'manifest.webmanifest', 'content.enc.json',
   'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
@@ -15,7 +15,8 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
   // Network first, so updates arrive when online; the cache covers offline use.
   e.respondWith(
-    fetch(e.request).then((res) => {
+    // no-cache: always ask for the newest file, so updates show up straight away.
+    fetch(e.request, { cache: 'no-cache' }).then((res) => {
       if (res.ok) { const copy = res.clone(); caches.open(VERSION).then((c) => c.put(e.request, copy)); }
       return res;
     }).catch(() => caches.match(e.request, { ignoreSearch: true }).then((r) => r || caches.match('index.html')))
