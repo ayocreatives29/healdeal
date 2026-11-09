@@ -117,8 +117,8 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--w
 .switch input[type=checkbox]:checked::after { transform: translateX(20px); }
 
 .seg { display: flex; background: var(--surface-2); border-radius: 12px; padding: 3px; margin: 0 0 16px; }
-.seg button { flex: 1; border: 0; background: transparent; padding: 8px 10px; border-radius: 9px; font-weight: 600; font-size: 15px; color: var(--muted); cursor: pointer; }
-.seg button[aria-pressed=true] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.seg button, .seg a { flex: 1; text-align: center; text-decoration: none; border: 0; background: transparent; padding: 8px 10px; border-radius: 9px; font-weight: 600; font-size: 15px; color: var(--muted); cursor: pointer; }
+.seg button[aria-pressed=true], .seg a[aria-pressed=true] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
 
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
 .chip { border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 8px 13px; font-size: 15px; cursor: pointer; text-align: left; }
@@ -233,6 +233,24 @@ details.lesson[open] > summary::after { transform: translateY(-30%) rotate(225de
 .flow h2 { font: 700 28px/1.2 var(--f-display); margin: 0 0 12px; }
 .flow .hint { color: var(--muted); margin: -4px 0 14px; }
 .flow .body p { font: 19px/1.55 var(--f-serif); margin: 0 0 12px; }
+/* Prayers: the scripture is the ground, the prayer is spoken over it. */
+.list > .seg { margin: 0 0 6px; }
+.prayer { background: var(--surface); border-radius: var(--r); padding: 18px 18px 10px; margin: 0 0 12px; box-shadow: 0 1px 0 var(--line), 0 8px 24px -18px rgba(10, 30, 32, .35); border-top: 3px solid var(--lamp); }
+.prayer-ref { font: 700 12px/1.3 var(--f-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--lamp); margin: 0 0 8px; }
+.prayer-ref a { color: inherit; text-decoration: none; border-bottom: 1px dotted currentColor; }
+.prayer-verse { font: italic 15.5px/1.5 var(--f-serif); color: var(--muted); margin: 0 0 10px; }
+.prayer-verse .ref { font-style: normal; }
+.prayer-text { font: 19px/1.55 var(--f-serif); margin: 0 0 6px; }
+.prayer-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 6px; }
+.prayer-foot .lesson-actions { border: 0; padding: 0; }
+.pray-tick { display: inline-flex; align-items: center; gap: 10px; background: none; border: 0; padding: 6px 0; font: 600 15px var(--f-ui); color: var(--ink); cursor: pointer; }
+.pray-tick .ring { width: 26px; height: 26px; flex: none; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; transition: background .2s, border-color .2s; }
+.pray-tick .ring svg { width: 15px; height: 15px; stroke: var(--water-ink); fill: none; stroke-width: 3; opacity: 0; stroke-linecap: round; stroke-linejoin: round; }
+.pray-tick[aria-pressed=true] .ring { background: var(--water); border-color: var(--water); }
+.pray-tick[aria-pressed=true] .ring svg { opacity: 1; }
+.pray-tick[aria-pressed=true] { color: var(--water); }
+.prayer-form { margin: 8px 0 12px; }
+#addPrayer { margin: 4px 0 0; }
 .verse-card { border-left: 3px solid var(--lamp); padding: 4px 0 4px 14px; margin: 18px 0; }
 .verse-card p { font: italic 19px/1.5 var(--f-serif); margin: 0 0 4px; }
 .flow-nav { display: flex; gap: 10px; margin-top: 22px; }

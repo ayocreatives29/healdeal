@@ -1,5 +1,5 @@
 // Keeps HealDeal working offline. Bump VERSION whenever app files change.
-const VERSION = 'healdeal-1';
+const VERSION = 'healdeal-2';
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'manifest.webmanifest', 'content.enc.json',
   'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 

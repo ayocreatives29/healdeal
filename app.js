@@ -28,6 +28,7 @@ const S = loadState();
 const DEFAULTS = {
   journal: [], prayerLog: {}, prayedDays: [], translations: {}, trView: {}, ticks: {}, lessonEdits: {}, userLessons: [],
   checklist: {}, drafts: {}, steps: [], relisten: '', lessonsTab: 'lessons', lockOnOpen: false,
+  prayerEdits: {}, userPrayers: [],
   reminders: { morning: { on: true, time: '07:00' }, evening: { on: true, time: '21:00' } },
 };
 for (const [k, v] of Object.entries(DEFAULTS)) if (S[k] === undefined) S[k] = structuredClone(v);
@@ -104,6 +105,68 @@ function catName(id) { return C.categories.find((c) => c.id === id)?.name || 'My
 function lessonsAll() {
   const base = C.lessons.map((l) => ({ ...l, ...(S.lessonEdits[l.id] || {}), edited: !!S.lessonEdits[l.id] }));
   return [...base, ...S.userLessons.map((l) => ({ ...l, mine: true }))];
+}
+function prayersAll() {
+  const base = (C.prayers || []).map((p) => {
+    const ref = p.verses.map((x) => x.ref).join(' · ');
+    return { ...p, ref, origRef: ref, ...(S.prayerEdits[p.id] || {}), edited: !!S.prayerEdits[p.id] };
+  });
+  return [...base, ...S.userPrayers.map((p) => ({ ...p, verses: [], mine: true }))];
+}
+function todayTicks() {
+  if (S.ticks.date !== dkey()) S.ticks = { date: dkey(), done: {} };
+  return S.ticks.done;
+}
+function prayerHtml(p, ticked) {
+  const refLink = (r) => `<a href="${bgUrl(r)}" target="_blank" rel="noopener">${esc(r)}</a>`;
+  const showVerses = p.verses.length && p.ref === p.origRef;
+  return `<article class="prayer" data-id="${esc(p.id)}">
+    <p class="prayer-ref">${showVerses ? p.verses.map((x) => refLink(x.ref)).join(' · ') : esc(p.ref || 'My prayer')}${p.edited ? '<span class="tag">Edited</span>' : ''}</p>
+    ${showVerses ? p.verses.map((x) => `<p class="prayer-verse">${esc(x.text)}${p.verses.length > 1 ? ` <span class="ref">${esc(x.ref)}</span>` : ''}</p>`).join('') : ''}
+    <p class="prayer-text">${esc(p.text)}</p>
+    <div class="prayer-foot"><button class="pray-tick" aria-pressed="${ticked}"><span class="ring">${ICON.tick}</span>${ticked ? 'Prayed' : 'Tick when prayed'}</button>
+      <span class="lesson-actions"><button data-act="edit">Edit</button>${p.edited ? '<button data-act="restore">Restore</button>' : ''}${p.mine ? '<button data-act="delete" class="danger">Delete</button>' : ''}</span></div>
+  </article>`;
+}
+function prayerForm(p) {
+  return `<div class="card prayer-form">
+    <label class="field"><span>Scripture</span><input type="text" class="f-ref" value="${esc(p?.ref || '')}" placeholder="For example, Isaiah 43:19"></label>
+    <label class="field"><span>Prayer</span><textarea class="f-text" placeholder="Father in the name of Jesus…">${esc(p?.text || '')}</textarea></label>
+    <div class="btn-row"><button class="btn primary f-save">Save prayer</button><button class="btn f-cancel">Cancel</button></div></div>`;
+}
+function bindPrayers(root) {
+  const done = todayTicks();
+  $$('.prayer', root).forEach((card) => {
+    const id = card.dataset.id, p = prayersAll().find((x) => x.id === id);
+    $('.pray-tick', card).onclick = (e) => {
+      const set = new Set(done.prayers || []);
+      set.has(id) ? set.delete(id) : set.add(id);
+      done.prayers = [...set]; saveSoon();
+      const on = set.has(id), b = e.currentTarget;
+      b.setAttribute('aria-pressed', on); b.lastChild.textContent = on ? 'Prayed' : 'Tick when prayed';
+    };
+    $$('.lesson-actions button', card).forEach((b) => b.onclick = () => {
+      const act = b.dataset.act;
+      if (act === 'edit') {
+        card.outerHTML = `<div data-edit="${esc(id)}">${prayerForm(p)}</div>`;
+        const box = $(`[data-edit="${CSS.escape(id)}"]`, root);
+        bindPrayerForm(box, p); $('.f-text', box).focus();
+      }
+      if (act === 'restore') { delete S.prayerEdits[id]; save(); route(); toast('Original prayer restored'); }
+      if (act === 'delete' && confirm('Delete this prayer? This can’t be undone.')) { S.userPrayers = S.userPrayers.filter((x) => x.id !== id); save(); route(); }
+    });
+  });
+}
+function bindPrayerForm(box, p) {
+  $('.f-cancel', box).onclick = () => route();
+  $('.f-save', box).onclick = () => {
+    const ref = $('.f-ref', box).value.trim(), text = $('.f-text', box).value.trim();
+    if (!text) { toast('Write the prayer first, then save.'); return; }
+    if (!p) S.userPrayers.push({ id: 'u-' + uid(), ref, text });
+    else if (p.mine) Object.assign(S.userPrayers.find((x) => x.id === p.id), { ref, text });
+    else S.prayerEdits[p.id] = { ref, text };
+    save(); route(); toast('Prayer saved');
+  };
 }
 function paras(arr) { return (arr || []).map((p) => `<p>${esc(p)}</p>`).join(''); }
 function splitParas(text) { return text.split(/\n\s*\n|\n/).map((s) => s.trim()).filter(Boolean); }
@@ -203,7 +266,7 @@ function route() {
   const v = $('#view');
   const views = {
     today: viewToday, settings: viewSettings,
-    pray: id ? (el) => viewScripture(el, id) : viewPray,
+    pray: id === 'prayers' ? viewPrayers : id ? (el) => viewScripture(el, id) : viewPray,
     lessons: (el) => viewLessons(el, id),
     heal: id ? (el) => viewExercise(el, id) : viewHeal,
     journal: id === 'new' ? viewNewEntry : id ? (el) => viewEntry(el, id) : viewJournal,
@@ -220,6 +283,7 @@ function viewToday(v) {
   const sc = C.scriptures[n % C.scriptures.length];
   const ls = lessonsAll();
   const le = ls[(n * 5 + 2) % ls.length];
+  const prs = prayersAll(), pr = prs.length ? prs[n % prs.length] : null;
   const days = S.prayedDays.length;
   const prayedToday = S.prayedDays.includes(dkey());
   const update = ENC && S.encVersion && ENC.version !== S.encVersion;
@@ -238,6 +302,9 @@ function viewToday(v) {
         <h2 class="h2">${esc(sc.ref)}</h2><p class="theme">${esc(sc.theme)}</p>
         <p class="scripture-snip">${esc(sc.verses[0].text)}${sc.verses.length > 1 ? ' …' : ''}</p>
         <a class="btn primary block" href="#/pray/${sc.id}">Pray through it</a></section>
+      ${pr ? `<section class="card"><p class="eyebrow">My prayer · ${esc(pr.ref || 'My prayer')}</p>
+        <p class="prayer-text">${esc(pr.text)}</p>
+        <a class="link" href="#/pray/prayers">Pray all ${prs.length} of my prayers</a></section>` : ''}
       <div class="quick">
         <a class="btn ember" href="#/heal/hurting">I’m hurting right now</a>
         <a class="btn" href="#/heal">Forgive</a>
@@ -254,8 +321,45 @@ function viewToday(v) {
 }
 
 /* ---------------- Pray ---------------- */
+function praySeg(tab) {
+  return `<div class="seg" role="group" aria-label="View"><a href="#/pray" role="button" aria-pressed="${tab === 'passages'}">Passages</a><a href="#/pray/prayers" role="button" aria-pressed="${tab === 'prayers'}">Prayers</a></div>`;
+}
+function viewPrayers(v) {
+  const done = todayTicks(), today = dkey();
+  const all = prayersAll();
+  const ticked = new Set(done.prayers || []);
+  const prayedToday = (S.prayerLog.prayers || []).includes(today);
+  v.innerHTML = pageTop('Pray', { lede: 'Pray each one aloud. Tick it as you pray.' }) + `<div class="page">
+    ${praySeg('prayers')}
+    ${all.map((p) => prayerHtml(p, ticked.has(p.id))).join('')}
+    <button class="btn block" id="addPrayer">Add a prayer</button><div id="addForm"></div>
+    <h2 class="section-h">What I prayed or sensed</h2>
+    <textarea id="notes" placeholder="Optional. Write anything God put on your heart.">${esc(S.drafts['pray-prayers'] || '')}</textarea>
+    <button class="btn lamp block" id="prayed" style="margin-top:14px">${prayedToday ? 'Save another prayer' : 'I’ve prayed these today'}</button>
+    ${prayedToday ? '<p class="small muted" style="text-align:center">You’ve already prayed these today.</p>' : ''}
+  </div>`;
+  bindPrayers(v);
+  $('#addPrayer').onclick = () => {
+    $('#addPrayer').hidden = true; $('#addForm').innerHTML = prayerForm(null);
+    bindPrayerForm($('#addForm'), null); $('#addForm .f-ref').focus();
+  };
+  $('#notes').oninput = (e) => { S.drafts['pray-prayers'] = e.target.value; saveSoon(); };
+  $('#prayed').onclick = () => {
+    (S.prayerLog.prayers ||= []).push(today);
+    if (!S.prayedDays.includes(today)) S.prayedDays.push(today);
+    const ids = new Set(todayTicks().prayers || []);
+    const list = prayersAll().filter((p) => ids.has(p.id)).map((p) => '• ' + (p.ref || 'My prayer')).join('\n');
+    const notes = ($('#notes').value || '').trim();
+    addJournal({ type: 'prayer', title: 'My prayers', fields: [
+      ...(list ? [{ label: 'I prayed', text: list }] : []),
+      ...(notes ? [{ label: 'What I prayed or sensed', text: notes }] : []),
+    ] });
+    delete S.drafts['pray-prayers']; save(); route(); toast('Prayer saved to your journal');
+  };
+}
 function viewPray(v) {
   v.innerHTML = pageTop('Pray', { lede: 'Pray through each passage. Tick each prompt as you pray it.' }) + `<div class="page list">
+    ${(C.prayers || S.userPrayers.length) ? praySeg('passages') : ''}
     ${C.scriptures.map((s) => {
       const log = S.prayerLog[s.id] || [];
       const meta = log.length ? `Prayed ${log.length} ${log.length === 1 ? 'time' : 'times'} · last on ${fmtDate(log[log.length - 1] + 'T12:00')}` : 'Not prayed yet';
@@ -268,8 +372,10 @@ function viewScripture(v, id) {
   const sc = C.scriptures.find((s) => s.id === id);
   if (!sc) { location.hash = '#/pray'; return; }
   const today = dkey();
-  if (S.ticks.date !== today) S.ticks = { date: today, done: {} };
+  todayTicks();
   const ticked = new Set(S.ticks.done[id] || []);
+  const myPrayers = prayersAll().filter((p) => p.scripture === id);
+  const prayerTicks = new Set(S.ticks.done.prayers || []);
   const tr = S.translations[id];
   const view = tr?.text && S.trView[id] === 'mine' ? 'mine' : 'web';
   const prayedToday = (S.prayerLog[id] || []).includes(today);
@@ -295,6 +401,7 @@ function viewScripture(v, id) {
     <h2 class="section-h">Pray about this</h2>
     ${sc.prompts.map((p, i) => `<button class="prompt" data-i="${i}" aria-pressed="${ticked.has(i)}"><span class="ring">${ICON.tick}</span>
       <span><span class="v">VERSE ${esc(p.v)}</span>${esc(p.text)}</span></button>`).join('')}
+    ${myPrayers.length ? `<h2 class="section-h">${myPrayers.length === 1 ? 'My prayer' : 'My prayers'}</h2><div id="myPrayers">${myPrayers.map((p) => prayerHtml(p, prayerTicks.has(p.id))).join('')}</div>` : ''}
     <h2 class="section-h">What I prayed or sensed</h2>
     <textarea id="notes" placeholder="Optional. Write anything God put on your heart.">${esc(S.drafts['pray-' + id] || '')}</textarea>
     <button class="btn lamp block" id="prayed" style="margin-top:14px">${prayedToday ? 'Save another prayer' : 'I’ve prayed this today'}</button>
@@ -307,6 +414,7 @@ function viewScripture(v, id) {
     b.setAttribute('aria-pressed', ticked.has(i)); S.ticks.done[id] = [...ticked]; saveSoon();
   });
   $('#notes').oninput = (e) => { S.drafts['pray-' + id] = e.target.value; saveSoon(); };
+  if ($('#myPrayers')) bindPrayers($('#myPrayers'));
   $('#trSave').onclick = () => {
     const text = $('#trText').value.trim();
     if (!text) { toast('Paste the passage first, then tap Save.'); return; }
@@ -316,7 +424,9 @@ function viewScripture(v, id) {
   $('#prayed').onclick = () => {
     (S.prayerLog[id] ||= []).push(today);
     if (!S.prayedDays.includes(today)) S.prayedDays.push(today);
-    const prayedPrompts = sc.prompts.filter((_, i) => ticked.has(i)).map((p) => '• ' + p.text).join('\n');
+    const pt = new Set(S.ticks.done.prayers || []);
+    const prayedPrompts = [...sc.prompts.filter((_, i) => ticked.has(i)).map((p) => '• ' + p.text),
+      ...myPrayers.filter((p) => pt.has(p.id)).map((p) => '• My prayer: ' + p.text)].join('\n');
     const notes = ($('#notes').value || '').trim();
     addJournal({ type: 'prayer', title: sc.ref, fields: [
       ...(prayedPrompts ? [{ label: 'I prayed', text: prayedPrompts }] : []),
