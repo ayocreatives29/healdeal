@@ -259,6 +259,17 @@ details.lesson[open] > summary::after { transform: translateY(-30%) rotate(225de
 #addPrayer { margin: 4px 0 0; }
 .verse-card { border-left: 3px solid var(--lamp); padding: 4px 0 4px 14px; margin: 18px 0; }
 .verse-card p { font: italic 19px/1.5 var(--f-serif); margin: 0 0 4px; }
+/* 0 to 10 rating */
+.scale { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 4px; margin: 8px 0 6px; }
+.scale button { height: 42px; min-width: 0; border: 1.5px solid var(--line); background: var(--surface); border-radius: 10px; font: 600 15px var(--f-ui); color: var(--ink); cursor: pointer; padding: 0; }
+.scale button[aria-pressed=true] { background: var(--water); border-color: var(--water); color: var(--water-ink); }
+.scale-ends { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+/* Grounding: one circle for each thing noticed */
+.count-dots { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; margin: 30px 0 10px; }
+.count-dots button { width: 52px; height: 52px; border-radius: 50%; border: 2px solid var(--lamp); background: transparent; cursor: pointer; transition: background .25s, transform .25s; }
+.count-dots button[aria-pressed=true] { background: var(--lamp); transform: scale(1.06); box-shadow: 0 0 22px -4px color-mix(in srgb, var(--lamp) 70%, transparent); }
+.alt-ex { display: block; text-align: center; margin-top: 6px; }
+.ex-lessons { display: grid; gap: 2px; margin: 0 0 6px; }
 .flow-nav { display: flex; gap: 10px; margin-top: 22px; }
 .flow-nav .btn { flex: 1; }
 .chosen { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--water); margin-top: 12px; }

@@ -585,7 +585,7 @@ function bindLesson(d) {
 
 /* ---------------- Heal ---------------- */
 function viewHeal(v) {
-  const order = ['forgive-other', 'forgive-self', 'letter', 'hurting'];
+  const order = ['forgive-other', 'forgive-self', 'letter', 'lament', 'thought-check', 'reach-out', 'hurting', 'ground'];
   const exs = order.map((id) => C.exercises.find((e) => e.id === id)).filter(Boolean);
   const steps = S.steps;
   v.innerHTML = pageTop('Heal', { lede: 'Forgiving others matters. So does forgiving yourself, and taking the next step forward.' }) + `<div class="page">
@@ -618,6 +618,9 @@ function viewExercise(v, id) {
   if (!ex) { location.hash = '#/heal'; return; }
   const d = (S.drafts[id] ||= { step: 0, f: {} });
   const total = ex.steps.length;
+  const countDone = {};   // grounding taps; not worth keeping
+  const waitStep = ex.steps.find((s) => s.type === 'wait');
+  const waitLeft = () => (waitStep && d.f[waitStep.key] ? Math.max(0, d.f[waitStep.key] - Date.now()) : 0);
 
   const render = () => {
     clearTimers();
@@ -639,17 +642,41 @@ function viewExercise(v, id) {
       : `<button class="btn lamp block" id="choose" style="margin-top:8px">${esc(st.button)}</button>`;
     if (st.type === 'check') inner += st.items.map((it, i) => `<label class="check"><input type="checkbox" data-i="${i}"${(d.f[st.key] || []).includes(i) ? ' checked' : ''}><span>${esc(it)}</span></label>`).join('')
       + `<p class="after" id="after"${(d.f[st.key] || []).length ? '' : ' hidden'}>${esc(st.after)}</p>`;
-    if (st.type === 'breathe') inner += `<div class="breath"><div class="orb" id="orb"></div><div class="say" id="say">Breathe in</div></div>`;
+    if (st.type === 'breathe') {
+      inner += `<div class="breath"><div class="orb" id="orb"></div><div class="say" id="say">Breathe in</div></div>`;
+      if (C.exercises.some((e) => e.id === 'ground')) inner += `<a class="link alt-ex" href="#/heal/ground">Or try grounding: 5, 4, 3, 2, 1</a>`;
+    }
+    // Rate 0 to 10, for example how true a thought feels.
+    if (st.type === 'scale') inner += `<div class="scale" role="group" aria-label="${esc(st.title)}">${Array.from({ length: 11 }, (_, n) =>
+      `<button type="button" data-n="${n}" aria-pressed="${d.f[st.key] === n}">${n}</button>`).join('')}</div>
+      <div class="scale-ends"><span>Not at all</span><span>Completely</span></div>`;
+    // Notice things one at a time; each tap fills a circle.
+    if (st.type === 'count') {
+      const got = countDone[d.step] || 0;
+      inner += `<div class="count-dots">${Array.from({ length: st.n }, (_, n) =>
+        `<button type="button" data-n="${n}" aria-pressed="${n < got}" aria-label="Noticed ${n + 1}"></button>`).join('')}</div>`;
+    }
+    // A ten-minute wait that keeps running while the next steps are done.
+    if (st.type === 'wait') inner += waitLeft() > 0
+      ? `<p class="chosen">${ICON.tick.replace('<svg', '<svg width="22" height="22" style="stroke:currentColor;fill:none;stroke-width:2.5"')} Started. Keep going while the time runs.</p>`
+      : d.f[st.key] ? '<p class="chosen">The ten minutes are up.</p>'
+      : `<button class="btn lamp block" id="startWait" style="margin-top:8px">${esc(st.button)}</button>`;
+    if (st.lessons?.length) inner += `<div class="ex-lessons">${st.lessons.map((lid) => C.lessons.find((l) => l.id === lid)).filter(Boolean)
+      .map((l) => `<a class="link" href="#/lessons/${encodeURIComponent(l.id)}">Read your lesson: ${esc(l.title)}</a>`).join('')}</div>`;
     if (st.verse) inner += verseCard(st.verse);
+    if (st.type === 'release' && waitLeft() > 0) inner += `<p class="after">You still have <span class="wait-left">${fmtLeft(waitLeft())}</span> of your ten minutes. Don’t send anything yet.</p>`;
+    const nextLabel = last ? 'Finish'
+      : (st.optional && !(d.f[st.key] || '').trim()) || (st.type === 'wait' && !d.f[st.key]) ? 'Skip'
+      : 'Next';
     const nav = st.type === 'release'
-      ? `<div class="flow-nav"><button class="btn" id="keep">Keep in my journal</button><button class="btn lamp" id="letgo">Let it go</button></div>
+      ? `<div class="flow-nav"><button class="btn" id="keep">${esc(st.keepLabel || 'Keep in my journal')}</button><button class="btn lamp" id="letgo">${esc(st.letgoLabel || 'Let it go')}</button></div>
          <div class="flow-nav" style="margin-top:8px"><button class="btn ghost" id="prev">Back</button></div>`
       : `<div class="flow-nav">${d.step > 0 ? '<button class="btn" id="prev">Back</button>' : ''}
-         <button class="btn primary" id="next">${last ? 'Finish' : st.optional && !(d.f[st.key] || '').trim() ? 'Skip' : 'Next'}</button></div>`;
+         <button class="btn primary" id="next">${nextLabel}</button></div>`;
 
     v.innerHTML = `<div class="flow-top"><div class="flow-top-inner">
         <button class="icon-btn" id="close" aria-label="Close and save for later">${ICON.close}</button>
-        <span class="count">${esc(ex.title)} · Step ${d.step + 1} of ${total}</span></div>
+        <span class="count">${esc(ex.title)} · Step ${d.step + 1} of ${total}${waitLeft() > 0 ? ` · <span class="wait-left">${fmtLeft(waitLeft())}</span> to wait` : ''}</span></div>
         <div class="bar"><i style="width:${((d.step + 1) / total) * 100}%"></i></div></div>
       <div class="flow" id="flow">${inner}${nav}</div>`;
 
@@ -669,6 +696,25 @@ function viewExercise(v, id) {
       $('#after').hidden = !d.f[st.key].length; saveSoon();
     });
     if (st.type === 'breathe') breathe();
+    $$('.scale button', v).forEach((b) => b.onclick = () => {
+      d.f[st.key] = +b.dataset.n; saveSoon();
+      $$('.scale button', v).forEach((x) => x.setAttribute('aria-pressed', x === b));
+    });
+    $$('.count-dots button', v).forEach((b) => b.onclick = () => {
+      const n = +b.dataset.n, got = countDone[d.step] || 0;
+      countDone[d.step] = n < got ? n : n + 1;   // tap a filled circle to undo back to it
+      $$('.count-dots button', v).forEach((x) => x.setAttribute('aria-pressed', +x.dataset.n < countDone[d.step]));
+      if (countDone[d.step] === st.n) $('#next').focus();
+    });
+    if ($('#startWait')) $('#startWait').onclick = () => { d.f[st.key] = Date.now() + st.minutes * 60e3; save(); render(); };
+    if (waitLeft() > 0) timers.push(setInterval(() => {
+      $$('.wait-left', v).forEach((el) => { el.textContent = fmtLeft(waitLeft()); });
+      if (waitLeft() > 0) return;
+      clearTimers(); toast('Your ten minutes are up. Well done for waiting.');
+      // Don't redraw a step that has a text box: it would take the keyboard away mid-sentence.
+      if (st.type === 'wait' || st.type === 'release') render();
+      else $('.flow-top .count').textContent = `${ex.title} · Step ${d.step + 1} of ${total}`;
+    }, 1000));
     $('#close').onclick = () => {
       const started = Object.keys(d.f).length || d.step > 0;
       if (!started) delete S.drafts[id];
@@ -704,22 +750,30 @@ function viewExercise(v, id) {
       if (st.type === 'field' && st.key !== 'name' && st.key !== 'to' && (val || '').trim()) fields.push({ label, text: val.trim() });
       if (st.type === 'choose' && val) fields.push({ label, text: st.body.join(' ').replaceAll('{name}', name || 'them') });
       if (st.type === 'check' && val?.length) fields.push({ label, text: val.map((i) => '• ' + st.items[i]).join('\n') });
+      if (st.type === 'scale' && typeof val === 'number') fields.push({ label, text: `${val} out of 10` });
     }
+    const thought = (d.f.thought || '').trim();
     const titles = {
       'forgive-other': `Forgiving ${name || 'someone'}`, 'forgive-self': 'Forgiving myself',
       letter: `Letter to ${(d.f.to || '').trim() || 'someone'}`, hurting: 'When I was hurting',
+      lament: 'My lament', 'thought-check': thought ? `Checking “${thought.length > 40 ? thought.slice(0, 40) + '…' : thought}”` : 'Checking a thought',
+      'reach-out': 'I didn’t send it',
     };
-    if (keep) addJournal({ type: 'exercise', ex: ex.id, title: titles[ex.id] || ex.title, fields });
-    else addJournal({ type: 'exercise', ex: ex.id, title: 'I let a letter go', fields: [{ label: '', text: 'You gave this letter to God and let it go.' }] });
+    const rel = ex.steps.find((s) => s.type === 'release') || {};
+    if (ex.nojournal) { /* nothing worth keeping */ }
+    else if (keep) addJournal({ type: 'exercise', ex: ex.id, title: titles[ex.id] || ex.title, fields });
+    else addJournal({ type: 'exercise', ex: ex.id, title: rel.letgoTitle || 'I let a letter go', fields: [{ label: '', text: rel.letgoText || 'You gave this letter to God and let it go.' }] });
     const stepField = ex.steps.find((s) => s.progress);
     if (stepField && (d.f[stepField.key] || '').trim()) S.steps.push({ id: uid(), text: d.f[stepField.key].trim(), date: new Date().toISOString(), done: false });
+    const moved = typeof d.f.before === 'number' && typeof d.f.after === 'number' && d.f.before !== d.f.after;
     delete S.drafts[id]; save();
     clearTimers();
     const lam = verse('lam-3-22');
     v.innerHTML = `<div class="flow done"><div class="glow"></div>
-      <h2>${keep ? 'Saved to your journal' : 'Let go. It’s in God’s hands now.'}</h2>
+      <h2>${ex.nojournal ? 'You came back to now.' : keep ? 'Saved to your journal' : esc(rel.letgoDone || 'Let go. It’s in God’s hands now.')}</h2>
+      ${moved ? `<p class="lede">The thought went from ${d.f.before} to ${d.f.after} out of 10.</p>` : ''}
       ${lam ? `<div class="verse-card" style="text-align:left"><p>${esc(lam.text)}</p><p class="ref">${esc(lam.ref)}</p></div>` : ''}
-      <div class="flow-nav"><a class="btn" href="#/heal">Back to Heal</a>${keep ? '<a class="btn primary" href="#/journal">Open journal</a>' : ''}</div></div>`;
+      <div class="flow-nav"><a class="btn" href="#/heal">Back to Heal</a>${keep && !ex.nojournal ? '<a class="btn primary" href="#/journal">Open journal</a>' : ''}</div></div>`;
   };
 
   render();
