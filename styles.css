@@ -275,10 +275,13 @@ details.lesson[open] > summary::after { transform: translateY(-30%) rotate(225de
 .chosen { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--water); margin-top: 12px; }
 .after { background: var(--lamp-soft); border-radius: 14px; padding: 12px 14px; margin-top: 8px; }
 
-.breath { display: grid; place-items: center; height: 260px; position: relative; }
-.breath .orb { width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(circle, #fff 0 18%, var(--lamp) 70%); box-shadow: 0 0 60px 20px color-mix(in srgb, var(--lamp) 40%, transparent); transition: transform 4s ease-in-out; }
-.breath .orb.big { transform: scale(2); }
-.breath .say { position: absolute; bottom: 0; left: 0; right: 0; text-align: center; font: 600 20px var(--f-display); }
+.breath { display: grid; place-items: center; height: 270px; position: relative; }
+.breath .orb { width: 84px; height: 84px; border-radius: 50%; background: radial-gradient(circle, #fff 0 18%, var(--lamp) 70%); box-shadow: 0 0 60px 20px color-mix(in srgb, var(--lamp) 40%, transparent); transition: transform 4s ease-in-out; }
+.breath .orb.small { transform: scale(1); }
+.breath .orb.mid { transform: scale(1.58); }
+.breath .orb.big { transform: scale(2.05); }
+.breath .say { position: absolute; bottom: 24px; left: 0; right: 0; text-align: center; font: 600 20px var(--f-display); }
+.breath .breath-sub { position: absolute; bottom: 0; left: 0; right: 0; text-align: center; font-size: 13px; font-weight: 600; color: var(--muted); }
 
 .done { text-align: center; padding-top: 40px; }
 .done .glow { width: 80px; height: 80px; margin: 10px auto 26px; border-radius: 50%; background: radial-gradient(circle, #fff 0 25%, var(--lamp) 70%); box-shadow: 0 0 70px 30px color-mix(in srgb, var(--lamp) 40%, transparent); animation: rise 1.4s ease both; }
@@ -322,7 +325,115 @@ body.focus .tabbar { display: none; }
 .toast { position: fixed; left: 50%; bottom: calc(var(--tab-h) + var(--safe-b) + 18px); transform: translate(-50%, 20px); background: var(--ink); color: var(--bg); padding: 12px 18px; border-radius: 14px; font-size: 15px; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; z-index: 20; max-width: calc(100% - 32px); text-align: center; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+/* ---------- Search, Filter Pills & Duration Row ---------- */
+.search-box { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 0 12px; margin: 0 0 12px; }
+.search-box svg { width: 18px; height: 18px; flex: none; stroke: var(--muted); fill: none; stroke-width: 2; stroke-linecap: round; }
+.search-box input[type=search] { width: 100%; border: 0; background: transparent; padding: 11px 0; font-size: 16px; outline: none; box-shadow: none; }
+.search-box:focus-within { border-color: var(--water); box-shadow: 0 0 0 3px color-mix(in srgb, var(--water) 20%, transparent); }
+
+.filter-bar { display: flex; gap: 7px; overflow-x: auto; padding: 2px 0 12px; margin: 0 -2px 6px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.filter-bar::-webkit-scrollbar { display: none; }
+.pill-btn { flex: none; border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 99px; padding: 7px 13px; font: 600 14px var(--f-ui); cursor: pointer; transition: background .18s, color .18s, border-color .18s; }
+.pill-btn[aria-pressed=true] { background: var(--water); border-color: var(--water); color: var(--water-ink); }
+.dur-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 12px; }
+.link-btn { background: none; border: 0; color: var(--water); font: 600 14px var(--f-ui); cursor: pointer; padding: 4px 0; }
+
+/* ---------- Today: Heart Check-in & 7-Day Rhythm ---------- */
+.checkin-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.checkin-summary { font: 17px/1.45 var(--f-serif); margin: 2px 0 10px; }
+.mood-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mood-btn { text-align: left; border: 1.5px solid var(--line); background: var(--bg); border-radius: 14px; padding: 11px 12px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; transition: border-color .18s, background .18s, transform .1s; }
+.mood-btn:active { transform: scale(.98); }
+.mood-btn strong { font: 650 15px/1.2 var(--f-display); color: var(--ink); }
+.mood-btn span { font-size: 13px; color: var(--muted); line-height: 1.25; }
+.mood-btn[aria-pressed=true] { border-color: var(--water); background: color-mix(in srgb, var(--water) 12%, var(--surface)); }
+.mood-btn.tone-ember[aria-pressed=true] { border-color: var(--ember); background: var(--ember-soft); }
+.mood-btn.tone-lamp[aria-pressed=true] { border-color: var(--lamp); background: var(--lamp-soft); }
+
+.rec-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.rec-pill { display: flex; flex-direction: column; gap: 2px; text-decoration: none; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; color: var(--ink); font: 600 14px/1.25 var(--f-display); }
+.rec-pill small { font: 600 11px var(--f-ui); color: var(--lamp); text-transform: uppercase; letter-spacing: .05em; }
+
+.rhythm-wrap { margin-top: 22px; text-align: center; }
+.rhythm { display: inline-flex; gap: 10px; padding: 10px 16px; background: var(--surface); border-radius: 99px; box-shadow: 0 1px 0 var(--line); }
+.rhythm-day { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: var(--muted); min-width: 24px; }
+.rhythm-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--surface-2); transition: background .2s; }
+.rhythm-day.on .rhythm-dot { background: var(--water); box-shadow: 0 0 8px color-mix(in srgb, var(--water) 55%, transparent); }
+.rhythm-day.today { color: var(--ink); }
+.rhythm-day.today .rhythm-dot { outline: 2px solid var(--lamp); outline-offset: 2px; }
+.rhythm-wrap .tally { margin-top: 10px; }
+
+/* ---------- Heal Cards, Badges & Why Box ---------- */
+.ex-meta-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.ex-badge { display: inline-block; font: 700 11px/1.2 var(--f-ui); text-transform: uppercase; letter-spacing: .06em; color: var(--lamp); background: var(--lamp-soft); border-radius: 99px; padding: 3px 9px; }
+.ex-card.hurting .ex-badge { background: color-mix(in srgb, var(--ember) 18%, transparent); color: var(--ember); }
+.ex-dur { font-size: 12px; font-weight: 600; color: var(--muted); }
+.why-box { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 4px 14px; margin: 0 0 16px; }
+.why-box summary { padding: 8px 0; font: 600 13px var(--f-ui); color: var(--water); cursor: pointer; list-style: none; }
+.why-box summary::-webkit-details-marker { display: none; }
+.why-box p { margin: 0 0 10px; font-size: 14px; line-height: 1.5; color: var(--muted); }
+
+.chip.toggle-chip[aria-pressed=true] { background: var(--water); border-color: var(--water); color: var(--water-ink); }
+.chip.toggle-chip.deep { border-style: dashed; }
+.chip.toggle-chip.deep[aria-pressed=true] { border-style: solid; background: var(--lamp); border-color: var(--lamp); color: #1A1406; }
+
+/* ---------- Affect Labeling & Emotion Picker ---------- */
+.emo-tabs { display: flex; gap: 7px; overflow-x: auto; padding: 2px 0 10px; margin-bottom: 4px; scrollbar-width: none; }
+.emo-tabs::-webkit-scrollbar { display: none; }
+.emo-panel { padding: 16px; }
+.emo-picked { background: var(--lamp-soft); border-radius: 14px; padding: 11px 14px; font-size: 15px; line-height: 1.45; margin-top: 6px; }
+
+/* ---------- Somatic Body Map ---------- */
+.bodymap-wrap { display: grid; grid-template-columns: 148px 1fr; gap: 14px; align-items: start; background: var(--surface); border-radius: var(--r); padding: 16px; box-shadow: 0 1px 0 var(--line); }
+@media (max-width: 420px) { .bodymap-wrap { grid-template-columns: 122px 1fr; gap: 10px; padding: 12px; } }
+.bodymap-svg { width: 100%; height: auto; display: block; }
+.bodymap-svg .body-outline { fill: var(--surface-2); stroke: var(--line); stroke-width: 2; }
+.bodymap-svg .bz circle { fill: color-mix(in srgb, var(--water) 14%, transparent); stroke: color-mix(in srgb, var(--water) 45%, transparent); stroke-width: 1.5; cursor: pointer; transition: fill .2s, stroke .2s, transform .2s; }
+.bodymap-svg .bz.on circle { fill: color-mix(in srgb, var(--ember) 55%, transparent); stroke: var(--ember); stroke-width: 2.5; }
+
+/* ---------- EMDR Butterfly Hug ---------- */
+.butterfly-box { background: var(--surface); border-radius: var(--r); padding: 22px 16px; text-align: center; box-shadow: 0 1px 0 var(--line); }
+.bf-stage { display: flex; align-items: center; justify-content: center; gap: 18px; margin: 6px 0 16px; }
+.bf-pad { width: 92px; height: 92px; border-radius: 50%; border: 2px solid var(--line); background: var(--bg); display: grid; place-items: center; font: 650 15px var(--f-display); color: var(--muted); transition: transform .35s ease, background .35s ease, box-shadow .35s ease, color .25s ease; }
+.bf-pad.active { background: radial-gradient(circle, #fff 0 15%, var(--lamp) 75%); border-color: var(--lamp); color: #1A1406; transform: scale(1.16); box-shadow: 0 0 42px 8px color-mix(in srgb, var(--lamp) 45%, transparent); }
+.bf-heart { font-size: 20px; color: var(--muted); opacity: .7; }
+.bf-status { font: 600 16px var(--f-display); margin: 0 0 14px; }
+.bf-controls { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.bf-controls svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.bf-controls #bfSound[aria-pressed=true] { background: var(--lamp-soft); color: var(--lamp); }
+
+/* ---------- Pennebaker Timed Writing ---------- */
+.tw-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; background: var(--surface); border-radius: 16px; padding: 10px 12px; margin-bottom: 12px; box-shadow: 0 1px 0 var(--line); }
+.tw-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.tw-clock { font: 700 20px var(--f-display); font-variant-numeric: tabular-nums; color: var(--water); min-width: 56px; text-align: right; }
+.tw-btn { min-height: 38px; padding: 0 14px; border-radius: 11px; }
+
+/* ---------- ACT Cognitive Defusion & Values ---------- */
+.defuse-stack { display: grid; gap: 10px; }
+.defuse-card { text-align: left; width: 100%; border: 1.5px solid var(--line); background: var(--surface); border-radius: 16px; padding: 14px 16px; cursor: pointer; transition: border-color .2s, background .2s; }
+.defuse-card[aria-pressed=true] { border-color: var(--water); background: color-mix(in srgb, var(--water) 10%, var(--surface)); }
+.defuse-txt { font: 18px/1.45 var(--f-serif); margin: 4px 0 8px; }
+.values-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.val-card { border: 1.5px solid var(--line); background: var(--surface); border-radius: 14px; padding: 14px 12px; font: 650 15px var(--f-display); cursor: pointer; text-align: center; transition: background .18s, border-color .18s, color .18s; }
+.val-card[aria-pressed=true] { background: var(--water); border-color: var(--water); color: var(--water-ink); }
+
+/* ---------- Window of Tolerance ---------- */
+.window-stack { display: grid; gap: 10px; }
+.win-card { text-align: left; width: 100%; border: 1.5px solid var(--line); background: var(--surface); border-radius: 16px; padding: 14px 16px; cursor: pointer; transition: border-color .2s, background .2s; }
+.win-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.win-card.tone-ember[aria-pressed=true] { border-color: var(--ember); background: var(--ember-soft); }
+.win-card.tone-water[aria-pressed=true] { border-color: var(--water); background: color-mix(in srgb, var(--water) 12%, var(--surface)); }
+.win-card.tone-lamp[aria-pressed=true] { border-color: var(--lamp); background: var(--lamp-soft); }
+.win-guide { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 15px; line-height: 1.45; }
+
+/* ---------- Journal Insights ---------- */
+.insights-card { background: linear-gradient(135deg, var(--surface), color-mix(in srgb, var(--lamp-soft) 45%, var(--surface))); }
+.insights-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 10px; }
+.ins-stat { background: var(--surface); border-radius: 14px; padding: 10px 12px; box-shadow: 0 1px 0 var(--line); }
+.ins-stat strong { display: block; font: 700 22px/1.15 var(--f-display); color: var(--water); }
+.ins-stat span { font-size: 12px; color: var(--muted); }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
-  .breath .orb.big { transform: none; }
+  .breath .orb.big, .breath .orb.mid, .bf-pad.active { transform: none; }
 }
